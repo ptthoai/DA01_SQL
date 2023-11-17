@@ -68,12 +68,10 @@ WHERE (product_id, year) IN (SELECT product_id, MIN(year)  FROM sales GROUP BY p
 
 --EX8
 SELECT customer_id
-from
-(SELECT CUSTOMER_ID,
-COUNT(PRODUCT_KEY) as so_lan
-FROM CUSTOMER
-GROUP BY CUSTOMER_ID)
-where so_lan > 1
+FROM customer 
+GROUP BY customer_id
+HAVING count(distinct product_key) = (SELECT count(distinct product_key) 
+FROM product)
 
 --EX9
 WITH a1 as(
@@ -96,17 +94,18 @@ GROUP BY COMPANY_ID
 HAVING COUNT(COMPANY_ID) >= 2) as ABC
 
 --EX11
-(SELECT name AS results from MovieRating as a
-left join users as b on a.user_id=b.user_id
-group by name
-order by name ASC
+(SELECT name results
+FROM Users as a, MovieRating as b
+WHERE a.user_id = b.user_id
+GROUP BY a.user_id
+ORDER BY COUNT(b.user_id) DESC, name ASC 
 LIMIT 1)
-UNION
-(SELECT d.title as results from MovieRating as c
-left join movies as d on c.movie_id=d.movie_id
-where created_at between '2020-02-01' and '2020-02-29'
-group by title
-order by AVG(C.RATING) DESC, TITLE ASC
+UNION ALL
+(SELECT title results
+FROM Movies as c, MovieRating as d
+WHERE c.movie_id = d.movie_id AND created_at BETWEEN '2020-02-01' AND '2020-02-29'
+GROUP BY c.movie_id
+ORDER BY AVG(rating) DESC, title ASC 
 LIMIT 1)
 
 --EX12
