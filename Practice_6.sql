@@ -27,4 +27,93 @@ UNION
 SELECT * FROM a2
 
 --EX3
+WITH abc as (SELECT policy_holder_id,count(case_id)
+FROM callers
+GROUP BY policy_holder_id
+HAVING count(case_id)>=3)
+SELECT COUNT(policy_holder_id) FROM abc;
 
+--EX4
+SELECT a.page_id
+FROM pages as A
+left join page_likes as B
+on a.page_id = b.page_id
+WHERE liked_date IS NULL
+ORDER BY b.user_id DESC;
+
+--EX5
+WITH a1 as 
+(SELECT  user_id	
+from user_actions 
+where EXTRACT(month from event_date) in (6,7) 
+and EXTRACT(year from event_date) = 2022 
+GROUP BY user_id 
+Having count(DISTINCT EXTRACT(month from event_date)) = 2)
+SELECT 7 as month_ , count(*) as number_of_user 
+from a1
+  
+--EX6
+SELECT LEFT(trans_date,7) AS month, country,
+COUNT(id) AS trans_count,
+SUM(CASE WHEN state = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+SUM(amount) AS trans_total_amount,
+SUM(CASE WHEN state = 'approved' THEN amount ELSE 0 END) AS approved_total_amount
+FROM Transactions
+GROUP BY month, country;
+
+--EX7
+SELECT product_id, year AS first_year, quantity, price 
+FROM sales
+WHERE (product_id, year) IN (SELECT product_id, MIN(year)  FROM sales GROUP BY product_id)
+
+--EX8
+SELECT customer_id
+from
+(SELECT CUSTOMER_ID,
+COUNT(PRODUCT_KEY) as so_lan
+FROM CUSTOMER
+GROUP BY CUSTOMER_ID)
+where so_lan > 1
+
+--EX9
+WITH a1 as(
+  select *
+  from Employees
+  where manager_id is not null)
+select a.employee_id 
+from a1 as a 
+left join Employees as b
+on b.employee_id =a.manager_id 
+where a.salary <30000 and b.employee_id is null
+
+--EX10 (bấm vào link ra giống EX1)
+SELECT 
+COUNT (company_id) AS duplicate_companies
+FROM 
+( SELECT company_id
+FROM job_listings
+GROUP BY COMPANY_ID
+HAVING COUNT(COMPANY_ID) >= 2) as ABC
+
+--EX11
+(SELECT name AS results from MovieRating as a
+left join users as b on a.user_id=b.user_id
+group by name
+order by name ASC
+LIMIT 1)
+UNION
+(SELECT d.title as results from MovieRating as c
+left join movies as d on c.movie_id=d.movie_id
+where created_at between '2020-02-01' and '2020-02-29'
+group by title
+order by AVG(C.RATING) DESC, TITLE ASC
+LIMIT 1)
+
+--EX12
+SELECT id, COUNT(*) AS num 
+FROM ( SELECT requester_id AS id FROM RequestAccepted
+    UNION ALL
+    SELECT accepter_id FROM RequestAccepted) AS friends_count
+GROUP BY id
+ORDER BY num DESC 
+LIMIT 1;
