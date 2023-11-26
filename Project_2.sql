@@ -1,3 +1,4 @@
+I- AD-HOC TASK
 ---1 Số lượng đơn hàng và số lượng khách hàng mỗi tháng
 select 
 FORMAT_DATE('%Y - %m', DATE (created_at)) AS ORDER_DATE,
@@ -60,6 +61,55 @@ from cte
 group by order_date, product_category
 order by order_date
 
+II- Tạo metric trước khi dựng dashboard
+---1  
+WITH CTE AS(select FORMAT_DATE('%Y-%m', DATE (a.created_at)) AS MONTH,
+extract(year from a.created_at) as YEAR,
+product_category, sum(SALE_PRICE) AS TPV, COUNT(c.ORDER_ID) AS TPO, SUM(COST) AS TOTAL_COST
+from bigquery-public-data.thelook_ecommerce.inventory_items AS a
+join bigquery-public-data.thelook_ecommerce.order_items as b on a.id=b.inventory_item_id
+join bigquery-public-data.thelook_ecommerce.orders as c on b.order_id=c.order_id
+group by 1,2,3
+ORDER BY MONTH),
+CTE1 AS (SELECT *,
+((LEAD(TPV) OVER(PARTITION BY PRODUCT_CATEGORY,YEAR ORDER BY MONTH) - TPV)/TPV)*100|| '%' AS Revenue_growth,
+((LEAD(TPO) OVER(PARTITION BY PRODUCT_CATEGORY,YEAR ORDER BY MONTH)- TPO)/TPO)*100|| '%' AS Order_growth
+FROM CTE)
+SELECT MONTH, YEAR, PRODUCT_CATEGORY,TPV,TPO, Revenue_growth,Order_growth, TOTAL_COST,
+TPV-TOTAL_COST AS Total_profit, TPV-TOTAL_COST/TOTAL_COST AS Profit_to_cost_ratio
+FROM CTE1
+ORDER BY YEAR
 
+---2
+WITH CTE AS(select created_at,user_id, sale_price,
+min(created_at) over(partition by user_id) as first_chasing
+from bigquery-public-data.thelook_ecommerce.order_items ),
+cte2 as(
+select FORMAT_DATE('%Y-%m', DATE (first_chasing)) AS cohort_date,
+(extract(year from created_at)-extract(year from first_chasing))*12 + (extract(month from created_at)-extract(month from first_chasing)) + 1 as index, user_id, sale_price
+from cte ),
+cte3 as(select cohort_date, index, count(distinct user_id)as cnt, sum(sale_price)
+from cte2
+group by cohort_date, index),
+cte4 as
+(select cohort_date,
+sum(case when index = 1 then cnt else 0 end) as t1,
+sum(case when index = 2 then cnt else 0 end) as t2,
+sum(case when index = 3 then cnt else 0 end) as t3,
+sum(case when index = 4 then cnt else 0 end) as t4
+from cte3
+group by cohort_date
+order by cohort_date)
+select cohort_date,
+round(100.00*t1/t1,2)|| '%' as m1,
+round(100.00*t2/t1,2)||'%' as m2,
+round(100.00*t3/t1,2)||'%'as m3,
+round(100.00*t4/t1,2)||'%'as m4
+from cte4
+NHận xét:
+- Giai đoạn từ 2019-2021, số lượng người tiêu dùng tăng lên sau mỗi tháng không ổn định và rất ít(2-5%)
+- Từ 2022 trở đi, số lượng người tiêu dùng tăng lên đáng kể(6-18%)
+- Có thể thấy tình hình kinh doanh của công ty đang ngày một cải thiện. Tuy nhiên công ty cần có thêm nhiều chương trình khuyến mãi hơn
+để có thể thu hút thêm nhiều khách hàng mới hơn
 
 
