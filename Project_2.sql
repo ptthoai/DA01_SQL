@@ -33,17 +33,18 @@ group by first_name, last_name, gender, age,youngest_age,oldest_age;
 ---4 Top 5 sản phẩm mỗi tháng
 with cte as(select FORMAT_DATE('%Y-%m', DATE (b.created_at)) AS ORDER_DATE,
 a.id as product_id, a.name as product_name,
-sum(b.sale_price) as sales, sum(a.cost) as cost, sum(b.sale_price - a.cost) as profit,
-DENSE_RANK() OVER (PARTITION BY FORMAT_DATE('%Y-%m', DATE (b.created_at)) ORDER BY sum(b.sale_price - a.cost) DESC) AS rank_per_month
+sum(b.sale_price) as sales, sum(a.cost) as cost, sum(b.sale_price - a.cost) as profit
 from bigquery-public-data.thelook_ecommerce.products as a
 join bigquery-public-data.thelook_ecommerce.order_items as b
 on a.id=b.product_id
 WHERE created_at between '2019-01-01' AND '2022-04-30'
-group by order_date, a.id , a.name ,b.created_at,
-b.sale_price, a.cost)
-select *
-from cte
-WHERE rank_per_month <= 5;
+group by 1,2,3),
+CTE2 AS (select *,
+DENSE_RANK() OVER (PARTITION BY order_date ORDER BY profit) AS rank_per_month
+from CTE)
+SELECT * FROM CTE2 
+where rank_per_month <=5
+order by order_date;
 
 ---5 doanh thu theo ngày từng danh mục sản phẩm
 with cte as(select FORMAT_DATE('%Y-%m-%d', DATE (a.created_at)) AS ORDER_DATE,
